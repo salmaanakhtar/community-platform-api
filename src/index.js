@@ -5,6 +5,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth/authRoutes');
+const followRoutes = require('./routes/follow/followRoutes');
 
 // connect database
 connectDB();
@@ -22,6 +23,9 @@ const io = socketIo(server);
 
 // register auth routes
 app.use('/auth', authRoutes);
+
+// register follow routes
+app.use('/follow', followRoutes);
 
 // start server
 const PORT = process.env.PORT || 5000;
