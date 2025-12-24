@@ -8,6 +8,8 @@ const authRoutes = require('./routes/auth/authRoutes');
 const followRoutes = require('./routes/follow/followRoutes');
 const hashtagRoutes = require('./routes/hashtag/hashtagRoutes');
 const postRoutes = require('./routes/post/postRoutes');
+const commentRoutes = require('./routes/comment/commentRoutes');
+const likeRoutes = require('./routes/like/likeRoutes');
 
 // connect database
 connectDB();
@@ -37,6 +39,12 @@ app.use('/hashtag', hashtagRoutes);
 
 // register post routes
 app.use('/post', postRoutes);
+
+// register comment routes
+app.use('/comment', commentRoutes);
+
+// register like routes
+app.use('/like', likeRoutes);
 
 // start server
 const PORT = process.env.PORT || 5000;
