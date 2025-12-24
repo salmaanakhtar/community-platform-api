@@ -7,6 +7,7 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth/authRoutes');
 const followRoutes = require('./routes/follow/followRoutes');
 const hashtagRoutes = require('./routes/hashtag/hashtagRoutes');
+const postRoutes = require('./routes/post/postRoutes');
 
 // connect database
 connectDB();
@@ -17,6 +18,9 @@ const app = express();
 // enable cors & json
 app.use(cors());
 app.use(express.json());
+
+// serve static files for uploads
+app.use('/uploads', express.static('uploads'));
 
 // init socket.io
 const server = http.createServer(app);
@@ -30,6 +34,9 @@ app.use('/follow', followRoutes);
 
 // register hashtag routes
 app.use('/hashtag', hashtagRoutes);
+
+// register post routes
+app.use('/post', postRoutes);
 
 // start server
 const PORT = process.env.PORT || 5000;
