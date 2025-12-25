@@ -10,6 +10,7 @@ const hashtagRoutes = require('./routes/hashtag/hashtagRoutes');
 const postRoutes = require('./routes/post/postRoutes');
 const commentRoutes = require('./routes/comment/commentRoutes');
 const likeRoutes = require('./routes/like/likeRoutes');
+const feedRoutes = require('./routes/feed/feedRoutes');
 
 // connect database
 connectDB();
@@ -45,6 +46,9 @@ app.use('/comment', commentRoutes);
 
 // register like routes
 app.use('/like', likeRoutes);
+
+// register feed routes
+app.use('/feed', feedRoutes);
 
 // start server
 const PORT = process.env.PORT || 5000;
