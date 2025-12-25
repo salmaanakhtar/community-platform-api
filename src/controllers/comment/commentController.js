@@ -1,5 +1,6 @@
 const Comment = require('../../models/commentModel');
 const Post = require('../../models/postModel');
+const Notification = require('../../models/notificationModel');
 
 exports.createComment = async (req, res) => {
   const { postId } = req.params;
@@ -12,12 +13,31 @@ exports.createComment = async (req, res) => {
       return res.status(404).json({ msg: 'Post not found' });
     }
 
+    if (post.deleted) {
+      return res.status(400).json({ msg: 'Cannot comment on deleted post' });
+    }
+
     const comment = new Comment({ author, post: postId, text });
     await comment.save();
 
     // Add comment to post
     post.comments.push(comment._id);
     await post.save();
+
+    // Create notification
+    if (post.author.toString() !== author) {
+      const notification = new Notification({
+        recipient: post.author,
+        sender: author,
+        type: 'comment',
+        post: postId
+      });
+      await notification.save();
+      if (global.io) {
+        global.io.to(post.author.toString()).emit('notification', notification);
+        global.io.to(post.author.toString()).emit('newComment', comment);
+      }
+    }
 
     res.json(comment);
   } catch (err) {
@@ -43,7 +63,8 @@ exports.deleteComment = async (req, res) => {
     // Remove from post
     await Post.findByIdAndUpdate(comment.post, { $pull: { comments: commentId } });
 
-    await comment.remove();
+    comment.deleted = true;
+    await comment.save();
     res.json({ msg: 'Comment deleted' });
   } catch (err) {
     console.error(err.message);

@@ -1,5 +1,6 @@
 const Post = require('../../models/postModel');
 const Hashtag = require('../../models/hashtagModel');
+const Follow = require('../../models/followModel');
 
 exports.createPost = async (req, res) => {
   const { text } = req.body;
@@ -23,6 +24,14 @@ exports.createPost = async (req, res) => {
       );
     }
 
+    // Emit new post to followers
+    if (global.io) {
+      const followers = await Follow.find({ following: author, type: 'user' }).select('follower');
+      followers.forEach(f => {
+        global.io.to(f.follower.toString()).emit('newPost', post);
+      });
+    }
+
     res.json(post);
   } catch (err) {
     console.error(err.message);
@@ -44,7 +53,8 @@ exports.deletePost = async (req, res) => {
       return res.status(403).json({ msg: 'Not authorized' });
     }
 
-    await post.remove();
+    post.deleted = true;
+    await post.save();
     res.json({ msg: 'Post deleted' });
   } catch (err) {
     console.error(err.message);

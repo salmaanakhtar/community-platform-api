@@ -4,6 +4,7 @@ const commentSchema = new mongoose.Schema({
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   post: { type: mongoose.Schema.Types.ObjectId, ref: 'Post', required: true },
   text: { type: String, required: true },
+  deleted: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 });
 

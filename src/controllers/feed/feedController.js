@@ -18,6 +18,7 @@ exports.getFeed = async (req, res) => {
 
     // Build query
     const query = {
+      deleted: false,
       $or: [
         { author: { $in: followedUserIds } },
         { hashtags: { $in: followedHashtagNames } },

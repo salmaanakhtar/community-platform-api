@@ -1,11 +1,17 @@
 const Conversation = require('../../models/conversationModel');
 const Message = require('../../models/messageModel');
+const Notification = require('../../models/notificationModel');
 
 exports.createConversation = async (req, res) => {
   const { recipientId } = req.body;
   const senderId = req.user.id;
 
   try {
+    const sender = await User.findById(senderId);
+    if (sender.blockedUsers.includes(recipientId)) {
+      return res.status(403).json({ msg: 'Cannot message this user' });
+    }
+
     let conversation = await Conversation.findOne({
       participants: { $all: [senderId, recipientId] }
     });
@@ -33,6 +39,23 @@ exports.sendMessage = async (req, res) => {
 
     // Update conversation lastMessage
     await Conversation.findByIdAndUpdate(conversationId, { lastMessage: message._id, updatedAt: Date.now() });
+
+    // Get conversation to find recipient
+    const conversation = await Conversation.findById(conversationId).populate('participants');
+    const recipient = conversation.participants.find(p => p._id.toString() !== senderId);
+
+    // Create notification
+    const notification = new Notification({
+      recipient: recipient._id,
+      sender: senderId,
+      type: 'message',
+      message: message._id
+    });
+    await notification.save();
+    if (global.io) {
+      global.io.to(recipient._id.toString()).emit('notification', notification);
+      global.io.to(recipient._id.toString()).emit('newMessage', message);
+    }
 
     res.json(message);
   } catch (err) {

@@ -1,5 +1,6 @@
 const Follow = require('../../models/followModel');
 const User = require('../../models/userModel');
+const Notification = require('../../models/notificationModel');
 
 exports.followUser = async (req, res) => {
   const { userId } = req.params; // the user to follow
@@ -24,6 +25,18 @@ exports.followUser = async (req, res) => {
 
     const follow = new Follow({ follower: followerId, following: userId, type: 'user' });
     await follow.save();
+
+    // Create notification
+    const notification = new Notification({
+      recipient: userId,
+      sender: followerId,
+      type: 'follow'
+    });
+    await notification.save();
+    if (global.io) {
+      global.io.to(userId).emit('notification', notification);
+    }
+
     res.json({ msg: 'User followed successfully' });
   } catch (err) {
     console.error(err.message);

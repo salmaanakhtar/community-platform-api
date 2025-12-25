@@ -1,5 +1,6 @@
 const Like = require('../../models/likeModel');
 const Post = require('../../models/postModel');
+const Notification = require('../../models/notificationModel');
 
 exports.likePost = async (req, res) => {
   const { postId } = req.params;
@@ -23,6 +24,21 @@ exports.likePost = async (req, res) => {
     post.likes.push(userId);
     await post.save();
 
+    // Create notification
+    if (post.author.toString() !== userId) {
+      const notification = new Notification({
+        recipient: post.author,
+        sender: userId,
+        type: 'like',
+        post: postId
+      });
+      await notification.save();
+      if (global.io) {
+        global.io.to(post.author.toString()).emit('notification', notification);
+        global.io.to(post.author.toString()).emit('likeUpdate', { postId, userId, action: 'like' });
+      }
+    }
+
     res.json({ msg: 'Post liked' });
   } catch (err) {
     console.error(err.message);
@@ -42,6 +58,12 @@ exports.unlikePost = async (req, res) => {
 
     // Remove like from post
     await Post.findByIdAndUpdate(postId, { $pull: { likes: userId } });
+
+    // Emit unlike update
+    const post = await Post.findById(postId);
+    if (global.io && post) {
+      global.io.to(post.author.toString()).emit('likeUpdate', { postId, userId, action: 'unlike' });
+    }
 
     res.json({ msg: 'Post unliked' });
   } catch (err) {

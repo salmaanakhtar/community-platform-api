@@ -7,7 +7,10 @@ const postSchema = new mongoose.Schema({
   hashtags: [{ type: String }],
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   comments: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Comment' }],
+  deleted: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 });
+
+postSchema.index({ text: 'text' });
 
 module.exports = mongoose.model('Post', postSchema);
