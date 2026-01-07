@@ -15,6 +15,7 @@ const feedRoutes = require('./routes/feed/feedRoutes');
 const messageRoutes = require('./routes/message/messageRoutes');
 const notificationRoutes = require('./routes/notification/notificationRoutes');
 const searchRoutes = require('./routes/search/searchRoutes');
+const userRoutes = require('./routes/user/userRoutes');
 
 // Rate limiters
 const loginLimiter = rateLimit({
@@ -48,20 +49,84 @@ connectDB();
 const app = express();
 
 // enable cors & json
-app.use(cors());
+app.use(cors({ origin: "http://localhost:4200", credentials: true }));
 app.use(express.json());
+app.use(require('cookie-parser')());
+
+// Request logging middleware
+app.use((req, res, next) => {
+  const startTime = Date.now();
+  const timestamp = new Date().toISOString();
+
+  // Log incoming request
+  console.log(`\n[${timestamp}] ${req.method} ${req.originalUrl}`);
+  console.log(`IP: ${req.ip} | User-Agent: ${req.get('User-Agent') || 'Unknown'}`);
+
+  // Log headers (excluding sensitive ones)
+  const safeHeaders = { ...req.headers };
+  delete safeHeaders.authorization;
+  delete safeHeaders['x-auth-token'];
+  console.log(`Headers:`, JSON.stringify(safeHeaders, null, 2));
+
+  // Log request body for POST/PUT/PATCH requests (excluding sensitive data)
+  if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+    const safeBody = { ...req.body };
+    // Remove sensitive fields
+    delete safeBody.password;
+    delete safeBody.token;
+    console.log(`Body:`, JSON.stringify(safeBody, null, 2));
+  }
+
+  // Log query parameters
+  if (Object.keys(req.query).length > 0) {
+    console.log(`Query:`, JSON.stringify(req.query, null, 2));
+  }
+
+  // Log response
+  const originalSend = res.send;
+  const originalJson = res.json;
+
+  const logResponse = (data) => {
+    const duration = Date.now() - startTime;
+    const responseTimestamp = new Date().toISOString();
+    console.log(`[${responseTimestamp}] Response: ${res.statusCode} | Duration: ${duration}ms`);
+
+    // Log response data for non-GET requests or errors
+    if (res.statusCode >= 400 || !req.method === 'GET') {
+      try {
+        const responseData = typeof data === 'string' ? JSON.parse(data) : data;
+        console.log(`Response Data:`, JSON.stringify(responseData, null, 2));
+      } catch (e) {
+        console.log(`Response Data: ${data}`);
+      }
+    }
+    console.log(`--- End Request ---\n`);
+  };
+
+  res.send = function(data) {
+    logResponse(data);
+    return originalSend.call(this, data);
+  };
+
+  res.json = function(data) {
+    logResponse(data);
+    return originalJson.call(this, data);
+  };
+
+  next();
+});
 
 // serve static files for uploads
 app.use('/uploads', express.static('uploads'));
 
 // init socket.io
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, { cors: { origin: ["http://localhost:4200", "http://localhost:4201"], credentials: true } });
 
 require('./sockets/socket')(io);
 
 // register auth routes
-app.use('/auth/login', loginLimiter);
+// app.use('/auth/login', loginLimiter); // Temporarily disabled for testing
 app.use('/auth', authRoutes);
 
 // register follow routes
@@ -71,25 +136,28 @@ app.use('/follow', followRoutes);
 app.use('/hashtag', hashtagRoutes);
 
 // register post routes
-app.use('/post', postRoutes);
+app.use('/posts', postRoutes);
 
 // register comment routes
-app.use('/comment', commentRoutes);
+app.use('/posts', commentRoutes);
 
 // register like routes
-app.use('/like', likeRoutes);
+app.use('/posts', likeRoutes);
 
 // register feed routes
 app.use('/feed', feedRoutes);
 
 // register message routes
-app.use('/message', messageRoutes);
+app.use('/messages', messageRoutes);
 
 // register notification routes
 app.use('/notification', notificationRoutes);
 
 // register search routes
 app.use('/search', searchRoutes);
+
+// register user routes
+app.use('/users', userRoutes);
 
 // Error handling middleware
 const errorHandler = require('./middlewares/error/errorHandler');

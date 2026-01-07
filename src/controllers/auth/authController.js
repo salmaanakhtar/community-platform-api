@@ -31,7 +31,14 @@ exports.register = async (req, res) => {
     });
     await refreshTokenDoc.save();
 
-    res.json({ accessToken, refreshToken });
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: false, // set to true in production with HTTPS
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    res.json({ accessToken });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
@@ -64,7 +71,14 @@ exports.login = async (req, res) => {
     });
     await refreshTokenDoc.save();
 
-    res.json({ accessToken, refreshToken });
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: false, // set to true in production with HTTPS
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    res.json({ accessToken });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
@@ -81,7 +95,7 @@ exports.getMe = async (req, res) => {
 };
 
 exports.refreshToken = async (req, res) => {
-  const { refreshToken } = req.body;
+  const { refreshToken } = req.cookies;
 
   if (!refreshToken) return res.status(401).json({ msg: 'Refresh token required' });
 
@@ -99,14 +113,24 @@ exports.refreshToken = async (req, res) => {
 
     const newAccessToken = jwt.sign({ user: { id: decoded.user.id } }, process.env.JWT_SECRET, { expiresIn: '15m' });
 
-    res.json({ accessToken: newAccessToken, refreshToken: newRefreshToken });
+    res.cookie('refreshToken', newRefreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    res.json({ accessToken: newAccessToken });
   } catch (err) {
     res.status(403).json({ msg: 'Invalid refresh token' });
   }
 };
 
 exports.logout = async (req, res) => {
-  const { refreshToken } = req.body;
-  await RefreshToken.findOneAndDelete({ token: refreshToken });
+  const { refreshToken } = req.cookies;
+  if (refreshToken) {
+    await RefreshToken.findOneAndDelete({ token: refreshToken });
+  }
+  res.clearCookie('refreshToken');
   res.json({ msg: 'Logged out' });
 };

@@ -11,6 +11,7 @@ const postLimiter = rateLimit({
 });
 
 router.post('/', authMiddleware, postLimiter, postController.createPost);
+router.get('/:postId/permissions', authMiddleware, postController.checkPermissions);
 router.delete('/:postId', authMiddleware, postController.deletePost);
 
 module.exports = router;

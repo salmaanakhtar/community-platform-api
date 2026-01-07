@@ -21,8 +21,7 @@ exports.getFeed = async (req, res) => {
       deleted: false,
       $or: [
         { author: { $in: followedUserIds } },
-        { hashtags: { $in: followedHashtagNames } },
-        { author: userId }
+        { hashtags: { $in: followedHashtagNames } }
       ]
     };
 

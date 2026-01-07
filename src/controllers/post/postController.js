@@ -3,15 +3,20 @@ const Hashtag = require('../../models/hashtagModel');
 const Follow = require('../../models/followModel');
 
 exports.createPost = async (req, res) => {
-  const { text } = req.body;
+  const { content, text } = req.body; // Support both content and text
+  const postText = content || text;
   const author = req.user.id;
-  const media = req.file ? req.file.path : '';
+  const media = ''; // TODO: Add file upload later
+
+  if (!postText) {
+    return res.status(400).json({ msg: 'Text is required' });
+  }
 
   // Extract hashtags
-  const hashtags = text.match(/#\w+/g) || [];
+  const hashtags = postText.match(/#\w+/g) || [];
 
   try {
-    const post = new Post({ author, text, media, hashtags });
+    const post = new Post({ author, text: postText, media, hashtags });
     await post.save();
 
     // Auto-create hashtags if not exist
@@ -33,6 +38,25 @@ exports.createPost = async (req, res) => {
     }
 
     res.json(post);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+};
+
+exports.checkPermissions = async (req, res) => {
+  const { postId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ msg: 'Post not found' });
+    }
+
+    // For now, allow engagement if post exists and user is authenticated
+    // TODO: Add more complex permission logic if needed
+    res.json({ canEngage: true });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');

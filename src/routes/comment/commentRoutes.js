@@ -10,7 +10,8 @@ const commentLimiter = rateLimit({
   message: 'Too many comments, please slow down.'
 });
 
-router.post('/post/:postId', authMiddleware, commentLimiter, commentController.createComment);
-router.delete('/:commentId', authMiddleware, commentController.deleteComment);
+router.post('/:postId/comments', authMiddleware, commentLimiter, commentController.createComment);
+router.get('/:postId/comments', authMiddleware, commentController.getComments);
+router.delete('/:postId/comments/:commentId', authMiddleware, commentController.deleteComment);
 
 module.exports = router;

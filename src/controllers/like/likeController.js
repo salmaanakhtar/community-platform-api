@@ -35,7 +35,7 @@ exports.likePost = async (req, res) => {
       await notification.save();
       if (global.io) {
         global.io.to(post.author.toString()).emit('notification', notification);
-        global.io.to(post.author.toString()).emit('likeUpdate', { postId, userId, action: 'like' });
+        global.io.emit('postLiked', { postId, likesCount: post.likes.length });
       }
     }
 
@@ -62,7 +62,7 @@ exports.unlikePost = async (req, res) => {
     // Emit unlike update
     const post = await Post.findById(postId);
     if (global.io && post) {
-      global.io.to(post.author.toString()).emit('likeUpdate', { postId, userId, action: 'unlike' });
+      global.io.emit('postLiked', { postId, likesCount: post.likes.length });
     }
 
     res.json({ msg: 'Post unliked' });

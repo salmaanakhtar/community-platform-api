@@ -4,8 +4,13 @@ const Notification = require('../../models/notificationModel');
 
 exports.createComment = async (req, res) => {
   const { postId } = req.params;
-  const { text } = req.body;
+  const { content, text } = req.body; // Support both
+  const commentText = content || text;
   const author = req.user.id;
+
+  if (!commentText) {
+    return res.status(400).json({ msg: 'Text is required' });
+  }
 
   try {
     const post = await Post.findById(postId);
@@ -17,7 +22,7 @@ exports.createComment = async (req, res) => {
       return res.status(400).json({ msg: 'Cannot comment on deleted post' });
     }
 
-    const comment = new Comment({ author, post: postId, text });
+    const comment = new Comment({ author, post: postId, text: commentText });
     await comment.save();
 
     // Add comment to post
@@ -35,11 +40,31 @@ exports.createComment = async (req, res) => {
       await notification.save();
       if (global.io) {
         global.io.to(post.author.toString()).emit('notification', notification);
-        global.io.to(post.author.toString()).emit('newComment', comment);
+        global.io.emit('newComment', { postId, commentsCount: post.comments.length });
       }
     }
 
     res.json(comment);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+};
+
+exports.getComments = async (req, res) => {
+  const { postId } = req.params;
+
+  try {
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ msg: 'Post not found' });
+    }
+
+    const comments = await Comment.find({ post: postId, deleted: false })
+      .populate('author', 'username')
+      .sort({ createdAt: -1 });
+
+    res.json(comments);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');

@@ -95,3 +95,16 @@ exports.unfollowHashtag = async (req, res) => {
     res.status(500).send('Server error');
   }
 };
+
+exports.checkFollowStatus = async (req, res) => {
+  const { userId } = req.params;
+  const followerId = req.user.id;
+
+  try {
+    const follow = await Follow.findOne({ follower: followerId, following: userId, type: 'user' });
+    res.json(!!follow);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+};
